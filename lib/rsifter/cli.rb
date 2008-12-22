@@ -129,7 +129,7 @@ module SifterCLICommands
           create_project_file(project_name)
           puts "Project switched to #{project_name}."
         else
-          puts "Project #{project_name} does not exists for user #{@client.username}."
+          puts "Project #{project_name} does not exist for user #{@client.username}."
         end
 
         exit
@@ -152,7 +152,11 @@ module SifterCLICommands
   end
   
   def issues(arguments)
-    if arguments.empty? then issues(['--list']) end
+    if arguments.empty?
+      issues(['--list'])
+    elsif arguments.first != '--help' && arguments.first != '--list'
+      issues(['--list', *arguments])
+    end
     
     conditions = {}
     parser = OptionParser.new do |options|
@@ -171,9 +175,7 @@ module SifterCLICommands
         
         issues = project_instance.issues
         conditions.each do |key, value|
-          issues.reject! do |issue|
-            issue.send(key.to_sym) != value
-          end
+          issues.reject! { |issue| issue.send(key.to_sym).downcase != value.downcase }
         end
         
         issues.each do |issue|
@@ -182,8 +184,23 @@ module SifterCLICommands
         end
       end
       
-      options.on('-p [priority]', String, 'Filter issues based on priority [priority].') do |priority|
-        conditions[:priority] = priority
+      conditions_list = {
+        'id' => 'i',
+        'assigned_to' => 'a',
+        'subject' => 't',
+        'opened_by' => 'o',
+        'status' => 's',
+        'priority' => 'p',
+        'category' => 'c',
+        'comments' => 'n',
+        'created' => 'd',
+        'updated' => 'u'
+      }
+      
+      conditions_list.each do |attribute, short|
+        options.on("-#{short} [#{attribute}]", "--#{attribute} [#{attribute}]", String, "Filter issues based on #{attribute}.") do |value|
+          conditions[attribute] = value
+        end
       end
       
       options.on('--help', 'Show this message.') do
