@@ -22,7 +22,7 @@ module Sifter
       return self.client.agent.get(self.url).search('div.issue').map do |issue|               
         {
           :id => issue.attributes['id'].match(/(\d+)/).to_a.last.strip,
-          :title => issue.at('h3/a').inner_text.strip,
+          :subject => issue.at('h3/a').inner_text.strip,
           :opened_by => issue.at('ul.people').search('li/strong').first.inner_text.strip,
           :assigned_to => issue.at('ul.people').search('li/strong').last.inner_text.strip,
           :status => issue.at('li.status').inner_text.strip,

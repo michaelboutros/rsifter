@@ -1,6 +1,13 @@
 module Sifter
   class Issue
-    attr_reader :id, :title, :opened_by, :assigned_to, :status, :priority, :category, :comments, :date_created, :date_updated
+    attr_reader :project, :id, :subject, :opened_by, :assigned_to, :status, :priority, :category, :comments, :date_created, :date_updated
+    
+    # Alternative names to subject.
+    alias :title :subject
+    alias :name :subject
+    
+    # Alternative names to opened_by.
+    alias :created_by :opened_by
     
     def initialize(project, details) # :nodoc:
       @project = project
