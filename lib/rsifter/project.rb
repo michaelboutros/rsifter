@@ -11,7 +11,7 @@ module Sifter
     # Load this project's issues and put them into the issues instance variable.
     def issues(reload = false)
       @issues = load_issues.collect {|issue| Issue.new(self, issue)} if @issues.nil? || reload
-    end    
+    end
     
     # Reload this project's issues.
     def reload_issues

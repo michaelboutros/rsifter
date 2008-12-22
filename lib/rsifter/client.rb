@@ -5,7 +5,7 @@ module Sifter
   
     # Provide the subdomain, username, and password of the user that you want to login.
     # If the login is successful, then load the user's projects.
-    def initialize(subdomain, username, password)
+    def initialize(subdomain, username, password, load = true)
       @detailed_return = false
     
       @agent = WWW::Mechanize.new
@@ -13,7 +13,7 @@ module Sifter
     
       @subdomain, @username, @password = subdomain, username, password
     
-      if login(subdomain, username, password)
+      if login(subdomain, username, password) && load
         load_projects
       end
     end
@@ -27,16 +27,20 @@ module Sifter
       main_page = @agent.get("http://#{subdomain}.sifterapp.com")
       login_form = main_page.forms.first
     
-      login_form.username = username
-      login_form.password = password
-    
-      login = @agent.submit(login_form, login_form.buttons.first)
-    
-      if login.forms.find {|form| form.action == '/session' }
+      if login_form.nil?
         return @logged_in = false
       else
-        return @logged_in = true
-      end  
+        login_form.username = username
+        login_form.password = password
+    
+        login = @agent.submit(login_form, login_form.buttons.first)
+    
+        if login.forms.find {|form| form.action == '/session' }
+          return @logged_in = false
+        else
+          return @logged_in = true
+        end
+      end
     end
     
     # Returns true if the user is logged in, false otherwise.
