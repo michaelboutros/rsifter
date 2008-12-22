@@ -1,0 +1,22 @@
+#!/usr/bin/env ruby
+
+args = ARGV.dup
+ARGV.clear
+
+COMMANDS = ['user', 'projects', 'issues']
+
+if args.length == 0 || args[0] == '--help'  
+  puts 'usage: sifter <command> [data]'
+  puts "commands: #{COMMANDS.join(', ')} (run with --help for options)"
+  
+  exit  
+end
+
+unless COMMANDS.include?(args[0])
+  puts "#{args[0]} is not a valid command. Run 'sifter' for command list."
+  exit
+end
+
+require File.dirname(__FILE__) + '/../lib/rsifter/cli.rb'
+require File.dirname(__FILE__) + '/../lib/rsifter.rb'
+SifterCLI.new(args.shift, args)
