@@ -14,23 +14,26 @@ class SifterCLI
     end
   end
   
-  def attempt_login(ask = false)
+  def attempt_login(ask = false, load = false)
     if File.exists?(credentials_file) && !ask
+      puts 'Logging in...'
       subdomain, username, password = *File.read(credentials_file).split(': ')
       password = Base64.decode64(password)
       
-      @client = Sifter::Client.new(subdomain, username, password)
+      @client = Sifter::Client.new(subdomain, username, password, load)
       
       unless @client.logged_in?
         puts 'Stored credentials not authenticated. Enter new credentials:'
-        attempt_login(true)
+        attempt_login(true, false)
       end
     else
+      puts 'Logging in...'
+      
       subdomain = ask_for_subdomain
       username = ask_for_username
       password = ask_for_password
     
-      @client = Sifter::Client.new(subdomain, username, password)
+      @client = Sifter::Client.new(subdomain, username, password, load)
 
       if @client.logged_in?
         create_credentials_for(subdomain, username, password)
@@ -95,6 +98,38 @@ class SifterCLI
     File.read(project_file).strip rescue nil
   end
   
+  def format_file
+    "#{ENV['HOME']}/.sifter/format"
+  end
+  
+  def create_format_file(format)
+    FileUtils.mkdir_p(File.dirname(format_file))
+
+   	File.open(format_file, 'w') do |f|
+   		f.puts format
+   	end
+
+    set_permissions_for(format_file)   
+  end
+  
+  def format
+    File.read(format_file) rescue "- {name.inspect}, assigned to {assigned_to}. {category}, {priority.downcase} priority."
+  end
+  
+  def formatted(issue)    
+    format.gsub(/\{(.+?)\}/) do |match|
+      manipulations = match.delete('{}').split('.')
+      attribute = manipulations.shift
+      
+      value = issue.send(attribute.to_sym)      
+      manipulations.each do |manipulation|
+        value = value.send(manipulation.to_sym)
+      end
+      
+      value
+    end
+  end
+  
   def set_permissions_for(file)
 		FileUtils.chmod 0700, File.dirname(file)
 		FileUtils.chmod 0600, file
@@ -123,16 +158,21 @@ module SifterCLICommands
       end
       
       options.on('--use [name]', String, 'Set the current project.') do |project_name|
-        attempt_login
-
-        if @client.projects.collect {|project| project.name}.include?(project_name)
-          create_project_file(project_name)
-          puts "Project switched to #{project_name}."
+        if project_name == project
+          puts "This project is already the current project. No changes made."
+          exit
         else
-          puts "Project #{project_name} does not exist for user #{@client.username}."
+          attempt_login
+          
+          if @client.projects.collect {|project| project.name}.include?(project_name) 
+            create_project_file(project_name)
+            puts "Project switched to #{project_name}."
+          else
+            puts "Project #{project_name} does not exist for user #{@client.username}."
+          end
+          
+          exit
         end
-
-        exit
       end
       
       options.on('--current', 'Shows the current project.') do
@@ -154,34 +194,31 @@ module SifterCLICommands
   def issues(arguments)
     if arguments.empty?
       issues(['--list'])
-    elsif arguments.first != '--help' && arguments.first != '--list'
+    elsif !['--help', '--format', '--list'].include?(arguments.first)
       issues(['--list', *arguments])
     end
     
-    conditions = {}
+    conditions, sort_option = {}, nil
     parser = OptionParser.new do |options|
       options.banner = 'usage: sifter issues [options]'
       
-      options.on('--list', 'Show a list of issues for the current project.') do
-        attempt_login
-        
-        project_name = project
-        project_instance = @client.projects.find {|project| project.name == project_name}
-        
-        if project_instance.nil?
-          puts "The project #{project.inspect} no longer exists. Please update the current project using 'sifter project --current'."
-          exit
+      options.on('--project [project]', String, 'Show this project\'s issues instead of the current project\'s issues.') do |project|
+        entered_project = project
+      end
+      
+      options.on('--format [format]', String, 'The format used to list issues. See docs for more information.') do |entered_format|
+        if entered_format.nil?
+          puts format
+        elsif entered_format == format
+          puts 'Entered format is the save as current format. No changes made.'
+        else
+          create_format_file(entered_format.gsub(/\\-/, '-'))
+          puts "Format #{entered_format.gsub(/\\-/, '-').inspect} saved."
         end
-        
-        issues = project_instance.issues
-        conditions.each do |key, value|
-          issues.reject! { |issue| issue.send(key.to_sym).downcase != value.downcase }
-        end
-        
-        issues.each do |issue|
-          category = issue.category == '' ? 'No category' : issue.category
-          puts "- #{issue.name.inspect}, assigned to #{issue.assigned_to}. #{category}, #{issue.priority.downcase} priority."
-        end
+      end
+      
+      options.on('--sort [sort]', 'Sort list of issues by [sort], ie. name DESC. Default direction is ASC') do |sort|
+        sort_option = sort
       end
       
       conditions_list = {
@@ -203,6 +240,40 @@ module SifterCLICommands
         end
       end
       
+      options.on('--list', 'Show a list of issues for the current project.') do
+        attempt_login
+        
+        project_name = entered_project rescue project
+        project_instance = @client.projects.find {|project| project.name == project_name}
+        
+        if project_instance.nil?
+          puts "The project #{project_name.inspect} does not exist. Please update the current project using 'sifter project --current', or enter a different project."
+          exit
+        end
+        
+        issues = project_instance.issues
+        
+        unless sort_option.nil? 
+          attribute, direction = *sort_option.split(' ')
+          
+          if issues.first.hash.keys.include?(attribute.to_sym)
+            issues = issues.sort_by {|issue| issue.send(attribute.to_sym)}
+            
+            if direction && direction == 'desc'
+              issues.reverse!
+            end
+          end
+        end
+        
+        conditions.each do |key, value|
+          issues.reject! { |issue| issue.send(key.to_sym).downcase != value.downcase }
+        end
+        
+        issues.each do |issue|
+          puts formatted(issue)
+        end
+      end
+            
       options.on('--help', 'Show this message.') do
         puts options
         exit

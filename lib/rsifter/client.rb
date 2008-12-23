@@ -48,6 +48,10 @@ module Sifter
       @logged_in      
     end
     
+    def projects
+      return @projects || load_projects
+    end
+    
     # Load the user's projects and put them into the projects instance variable.
     def load_projects
       @projects = parse_projects.collect {|project| Project.new(self, project[:id], project[:name])}

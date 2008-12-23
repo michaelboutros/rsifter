@@ -19,9 +19,10 @@ module Sifter
     end
     
     def load_issues # :nodoc:
-      return self.client.agent.get(self.url).search('div.issue').map do |issue|               
+      return self.client.agent.get(self.url).search('div.issue').map do |issue|              
         {
-          :id => issue.attributes['id'].match(/(\d+)/).to_a.last.strip,
+          :id => issue.attributes['id'].match(/(\d+)/).to_a.last.strip.to_i,
+          :number => issue.search('div.details/h3/span').to_a.first.inner_text.match(/(\d+)/).to_a.last.to_i,
           :subject => issue.at('h3/a').inner_text.strip,
           :opened_by => issue.at('ul.people').search('li/strong').first.inner_text.strip,
           :assigned_to => issue.at('ul.people').search('li/strong').last.inner_text.strip,
