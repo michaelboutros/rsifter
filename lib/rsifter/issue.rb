@@ -47,14 +47,8 @@ module Sifter
           updates[:status] == 'reopened'
         end
         
-        status_codes = {
-          '1' => 'Open',
-          '2' => 'Reopened',
-          '3' => 'Resolved',
-          '4' => 'Closed'
-        }
-        
-        value = status_codes.to_a.find {|code, status| status.downcase == updates[:status].downcase }[0]
+        status_codes ['Open', 'Reopened', 'Resolved', 'Closed']        
+        value = (status_codes.to_a.find {|code, status| status.downcase == updates[:status].downcase }.index + 1).to_s
 
         if value.nil?
           return Sifter.detailed_return(project.client.detailed_return,

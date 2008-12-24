@@ -9,31 +9,54 @@ module Sifter
     end
     
     # Load this project's issues based on criteria.
-    def issue(criteria)
-      begin
-        issues.find do |issue|
-          matched = false
+    def issue(criteria_or_other)
+      reload_issues!
+      
+      if criteria_or_other.is_a?(Hash)
+        begin
+          issue = issues.find do |issue|
+            matched = false
         
-          criteria.each do |key, value|
-            matched = (issue.send(key.to_sym).to_s.downcase == value.to_s.downcase)
+            criteria_or_other.each do |key, value|
+              matched = (issue.send(key.to_sym).to_s.downcase == value.to_s.downcase)
+            end
+        
+            matched
+          end      
+        rescue NoMethodError
+          return Sifter.detailed_return(client.detailed_return,
+                  :successful => false,
+                  :message => 'Criteria contained invalid attributes.')
+        end
+      elsif criteria_or_other.is_a?(Integer)
+        issue = issues.find {|issue| issue.id.to_s == criteria_or_other.to_s}
+      elsif criteria_or_other.is_a?(String)
+        issue ||= begin 
+          if (number = criteria_or_other.match(/^#(\d+)$/))
+            issues.find {|issue| issue.number.to_s == number.to_a.last}
+          else
+            issues.find {|issue| issue.subject == criteria_or_other}
           end
-        
-          matched
-        end        
-      rescue NoMethodError
-        return Sifter.detailed_return(client.detailed_return,
-                :successful => false,
-                :message => 'Criteria contained invalid attributes.')
+        end
+      end
+      
+      if issue.nil?
+         return Sifter.detailed_return(client.detailed_return,
+                  :successful => false,
+                  :message => 'Issue not found.')
+      else
+        return issue
       end
     end
     
     # Load this project's issues and put them into the issues instance variable.
     def issues(reload = false)
-      @issues = load_issues.collect {|issue| Issue.new(self, issue)} if @issues.nil? || reload
+      @issues = load_issues.collect {|issue| Issue.new(self, issue)} if reload || @issues.nil?
+      return @issues
     end
     
     # Reload this project's issues.
-    def reload_issues
+    def reload_issues!
       issues(true)
     end
     
