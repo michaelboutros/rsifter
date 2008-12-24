@@ -1,6 +1,6 @@
 module Sifter
   class Issue
-    attr_reader :project, :hash, :id, :number, :subject, :opened_by, :assigned_to, :status, :priority, :category, :comments, :date_created, :date_updated
+    attr_reader :project, :url, :hash, :id, :number, :subject, :opened_by, :assigned_to, :status, :priority, :category, :comments, :date_created, :date_updated
     
     # Alternative names to subject.
     alias :title :subject
@@ -16,6 +16,61 @@ module Sifter
       if @category == ''
         @category = 'None'
       end
+      
+      @url = project.url + "/#{self.number}"
+    end
+    
+    def update(updates)
+      if updates.empty?
+        return true
+      end
+      
+      # subject and body on a whole seperate page.
+      
+      # status as well, opened and reopened need to be kind of aliased
+      editable_attributes = [:priority, :category, :assignee]
+      
+      if !(updates.keys - editable_attributes).empty?
+        attributes_list = editable_attributes.collect {|attribute| attribute.to_s}.join(', ')
+        
+        return Sifter.detailed_return(project.client.detailed_return, 
+                :successful => false, 
+                :message => "You provided too many updates. Only the following are available for updating: #{attributes_list}.") 
+      end
+      
+      issue_page = self.project.client.agent.get(self.url)
+      update_form = issue_page.forms.to_a.first
+      
+      editable_attributes.each do |attribute|
+        if updates.keys.include?(attribute)
+          value = value_for("comment[#{attribute.to_s}_id]", update_form, updates[attribute])
+          
+          if value.nil?
+            return Sifter.detailed_return(project.client.detailed_return,
+              :successful => false,
+              :message => "You provided an invalid value for '#{attribute.to_s}'.")
+          end
+
+          update_form.field("comment[#{attribute.to_s}_id]").value = value
+        end
+      end
+      
+      begin
+        project.client.agent.submit(update_form, update_form.buttons.first)
+        
+        return Sifter.detailed_return(project.client.detailed_return, 
+                :successful => true,
+                :message => 'The issue was successfully updated.')
+      rescue
+        return Sifter.detailed_return(project.client.detailed_return, 
+                :successful => false,
+                :message => 'An unexpected error occured. Please try again.')
+      end
+           
+    end
+    
+    def value_for(field, form, text)
+      form.field(field).options.find {|field| field.text.downcase == text.downcase}
     end
   end
 end
