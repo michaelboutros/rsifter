@@ -8,6 +8,25 @@ module Sifter
       @client, @id, @name, @url = client, id, name, url
     end
     
+    # Load this project's issues based on criteria.
+    def issue(criteria)
+      begin
+        issues.find do |issue|
+          matched = false
+        
+          criteria.each do |key, value|
+            matched = (issue.send(key.to_sym).to_s.downcase == value.to_s.downcase)
+          end
+        
+          matched
+        end        
+      rescue NoMethodError
+        return Sifter.detailed_return(client.detailed_return,
+                :successful => false,
+                :message => 'Criteria contained invalid attributes.')
+      end
+    end
+    
     # Load this project's issues and put them into the issues instance variable.
     def issues(reload = false)
       @issues = load_issues.collect {|issue| Issue.new(self, issue)} if @issues.nil? || reload
