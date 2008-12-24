@@ -48,6 +48,11 @@ module Sifter
       @logged_in      
     end
     
+    def project(name_or_id)
+      attribute = (name_or_id.is_a?(Integer) || name_or_id.to_i != 0 ? :id : :name)
+      self.projects.find {|project| project.send(attribute) == name_or_id.to_s}
+    end
+    
     def projects
       return @projects || load_projects
     end

@@ -164,9 +164,9 @@ module SifterCLICommands
         else
           attempt_login
           
-          if @client.projects.collect {|project| project.name}.include?(project_name) 
+          unless @client.project(project_name).nil?
             create_project_file(project_name)
-            puts "Project switched to #{project_name}."
+            puts "Project switched to #{@client.project(project_name).name}."
           else
             puts "Project #{project_name} does not exist for user #{@client.username}."
           end
@@ -244,7 +244,7 @@ module SifterCLICommands
         attempt_login
         
         project_name = entered_project rescue project
-        project_instance = @client.projects.find {|project| project.name == project_name}
+        project_instance = @client.project(project_name)
         
         if project_instance.nil?
           puts "The project #{project_name.inspect} does not exist. Please update the current project using 'sifter project --current', or enter a different project."
