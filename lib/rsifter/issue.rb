@@ -20,14 +20,18 @@ module Sifter
       @url = project.url + "/#{self.number}"
     end
     
+    def body
+      project.client.agent.get(self.url).at('div.description/p').inner_text
+    end
+    
     def update(updates)
       if updates.empty?
-        return true
+        return Sifter.detailed_return(project.client.detailed_return,
+          :successful => true,
+          :message => 'No updates or changes made.')
       end
       
       # subject and body on a whole seperate page.
-      
-      # status as well, opened and reopened need to be kind of aliased
       editable_attributes = [:status, :priority, :category, :assignee]
       
       if !(updates.keys - editable_attributes).empty?
@@ -41,7 +45,7 @@ module Sifter
       issue_page = self.project.client.agent.get(self.url)
       update_form = issue_page.forms.first
       
-      # Chanfethe status value explicitly, since "opened" can mean either opened or reopened.
+      # Change the status value explicitly, since "opened" can mean either opened or reopened.
       if updates.keys.include?(:status)
         if updates[:status] == 'open' && (self.status == 'closed' || self.status == 'resolved')
           updates[:status] == 'reopened'
