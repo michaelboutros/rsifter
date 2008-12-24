@@ -28,7 +28,7 @@ module Sifter
       # subject and body on a whole seperate page.
       
       # status as well, opened and reopened need to be kind of aliased
-      editable_attributes = [:priority, :category, :assignee]
+      editable_attributes = [:status, :priority, :category, :assignee]
       
       if !(updates.keys - editable_attributes).empty?
         attributes_list = editable_attributes.collect {|attribute| attribute.to_s}.join(', ')
@@ -39,16 +39,41 @@ module Sifter
       end
       
       issue_page = self.project.client.agent.get(self.url)
-      update_form = issue_page.forms.to_a.first
+      update_form = issue_page.forms.first
       
+      # Chanfethe status value explicitly, since "opened" can mean either opened or reopened.
+      if updates.keys.include?(:status)
+        if updates[:status] == 'open' && (self.status == 'closed' || self.status == 'resolved')
+          updates[:status] == 'reopened'
+        end
+        
+        status_codes = {
+          '1' => 'Open',
+          '2' => 'Reopened',
+          '3' => 'Resolved',
+          '4' => 'Closed'
+        }
+        
+        value = status_codes.to_a.find {|code, status| status.downcase == updates[:status].downcase }[0]
+
+        if value.nil?
+          return Sifter.detailed_return(project.client.detailed_return,
+                  :successful => false,
+                  :message => 'You provided an invalid value for \'status\'.')
+        end
+        
+        update_form.radiobuttons.find {|field| field.value == value}.check
+      end
+      
+      editable_attributes.delete(:status)
       editable_attributes.each do |attribute|
         if updates.keys.include?(attribute)
           value = value_for("comment[#{attribute.to_s}_id]", update_form, updates[attribute])
           
           if value.nil?
             return Sifter.detailed_return(project.client.detailed_return,
-              :successful => false,
-              :message => "You provided an invalid value for '#{attribute.to_s}'.")
+                    :successful => false,
+                    :message => "You provided an invalid value for '#{attribute.to_s}'.")
           end
 
           update_form.field("comment[#{attribute.to_s}_id]").value = value
