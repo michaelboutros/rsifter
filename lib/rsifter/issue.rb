@@ -31,7 +31,6 @@ module Sifter
           :message => 'No updates or changes made.')
       end
       
-      # subject and body on a whole seperate page.
       editable_attributes = [:status, :priority, :category, :assignee]
       
       if !(updates.keys - editable_attributes).empty?
@@ -47,20 +46,26 @@ module Sifter
       
       # Change the status value explicitly, since "opened" can mean either opened or reopened.
       if updates.keys.include?(:status)
-        if updates[:status] == 'open' && (self.status == 'closed' || self.status == 'resolved')
-          updates[:status] == 'reopened'
+        if updates[:status] == 'open' && (self.status == 'Closed' || self.status == 'Resolved')
+          updates[:status] = 'reopened'
         end
         
-        status_codes ['Open', 'Reopened', 'Resolved', 'Closed']        
-        value = (status_codes.to_a.find {|code, status| status.downcase == updates[:status].downcase }.index + 1).to_s
-
+        if updates[:status] == 'resolved' && self.status == 'Closed'          
+          return Sifter.detailed_return(project.client.detailed_return,
+                  :successful => false,
+                  :message => 'You cannot change a closed issue to resolved.')
+        end
+        
+        status_codes = {'1' => 'Open', '2' => 'Reopened', '3' => 'Resolved', '4' => 'Closed'}
+        
+        value = status_codes.to_a.find {|code, status| status.downcase == updates[:status].downcase }[0]
         if value.nil?
           return Sifter.detailed_return(project.client.detailed_return,
                   :successful => false,
                   :message => 'You provided an invalid value for \'status\'.')
-        end
+        end      
         
-        update_form.radiobuttons.find {|field| field.value == value}.check
+        update_form.radiobuttons.find {|field| field.value.to_s.downcase == value.to_s.downcase}.check
       end
       
       editable_attributes.delete(:status)
@@ -89,7 +94,7 @@ module Sifter
                 :successful => false,
                 :message => 'An unexpected error occured. Please try again.')
       end
-           
+      
     end
     
     def value_for(field, form, text)
