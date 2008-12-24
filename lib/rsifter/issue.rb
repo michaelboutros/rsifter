@@ -31,6 +31,10 @@ module Sifter
           :message => 'No updates or changes made.')
       end
       
+      update_others(updates)
+    end
+    
+    def update_others(updates)
       editable_attributes = [:status, :priority, :category, :assignee]
       
       if !(updates.keys - editable_attributes).empty?
@@ -38,7 +42,7 @@ module Sifter
         
         return Sifter.detailed_return(project.client.detailed_return, 
                 :successful => false, 
-                :message => "You provided too many updates. Only the following are available for updating: #{attributes_list}.") 
+                :message => "You provided invalid updates. Only the following are available for updating: #{attributes_list}.") 
       end
       
       issue_page = self.project.client.agent.get(self.url)
@@ -56,6 +60,10 @@ module Sifter
                   :message => 'You cannot change a closed issue to resolved.')
         end
         
+        if updates[:status] == 'open' && self.status == 'Reopened'
+          updates[:status] = 'reopened'
+        end
+        
         status_codes = {'1' => 'Open', '2' => 'Reopened', '3' => 'Resolved', '4' => 'Closed'}
         
         value = status_codes.to_a.find {|code, status| status.downcase == updates[:status].downcase }[0]
@@ -65,7 +73,7 @@ module Sifter
                   :message => 'You provided an invalid value for \'status\'.')
         end      
         
-        update_form.radiobuttons.find {|field| field.value.to_s.downcase == value.to_s.downcase}.check
+        update_form.radiobuttons.find {|field| field.value.to_s.downcase == value.to_s.downcase}.check  
       end
       
       editable_attributes.delete(:status)
@@ -94,7 +102,6 @@ module Sifter
                 :successful => false,
                 :message => 'An unexpected error occured. Please try again.')
       end
-      
     end
     
     def value_for(field, form, text)
