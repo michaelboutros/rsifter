@@ -25,10 +25,10 @@ module Sifter
           end      
         rescue NoMethodError
           return Sifter.detailed_return(client.detailed_return,
-                  :successful => false,
+                  :successful => nil,
                   :message => 'Criteria contained invalid attributes.')
         end
-      elsif criteria_or_other.is_a?(Integer)
+      elsif criteria_or_other.is_a?(Integer) || criteria_or_other.to_i != 0
         issue = issues.find {|issue| issue.id.to_s == criteria_or_other.to_s}
       elsif criteria_or_other.is_a?(String)
         issue ||= begin 
@@ -42,7 +42,7 @@ module Sifter
       
       if issue.nil?
          return Sifter.detailed_return(client.detailed_return,
-                  :successful => false,
+                  :successful => nil,
                   :message => 'Issue not found.')
       else
         return issue

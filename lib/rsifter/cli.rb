@@ -191,11 +191,11 @@ module SifterCLICommands
   def issues(arguments)
     if arguments.empty?
       issues(['--list'])
-    elsif !['--help', '--format', '--list'].include?(arguments.first)
+    elsif !['--help', '--format', '--list', '--update'].include?(arguments.first)
       issues(['--list', *arguments])
     end
     
-    conditions, sort_option = {}, nil
+    issue_hash, sort_option = {}, nil
     parser = OptionParser.new do |options|
       options.banner = 'usage: sifter issues [options]'
       
@@ -228,12 +228,13 @@ module SifterCLICommands
         'category' => 'c',
         'comments' => 'n',
         'created' => 'd',
-        'updated' => 'u'
+        'updated' => 'u',
+        'body' => 'b'
       }
       
       conditions_list.each do |attribute, short|
         options.on("-#{short} [#{attribute}]", "--#{attribute} [#{attribute}]", String, "Filter issues based on #{attribute}.") do |value|
-          conditions[attribute] = value
+          issue_hash[attribute] = value
         end
       end
       
@@ -262,7 +263,7 @@ module SifterCLICommands
           end
         end
         
-        conditions.each do |key, value|
+        issue_hash.each do |key, value|
           issues.reject! { |issue| issue.send(key.to_sym).downcase != value.downcase }
         end
         
@@ -270,7 +271,27 @@ module SifterCLICommands
           puts formatted(issue)
         end
       end
-            
+      
+      options.on('--update [selector]', 'Update the issue with the flags passed. See --help for available flags.') do |issue_selector|
+        if issue_selector.nil?
+          puts 'You must pass an issue id, number, or name to find the issue you want to update.'
+          exit
+        end
+        
+        attempt_login
+        
+        issue = @client.project(project).issue(issue_selector)
+        if issue.is_a?(Hash) && issue[:successful] == nil
+          puts 'Issue not found.'
+          exit
+        end
+        
+        update_hash = issue_hash.each {|key, value| issue_hash.delete(key) and issue_hash[key.to_sym] = value}
+        update = issue.update(update_hash)
+        
+        puts update[:message]       
+      end
+      
       options.on('--help', 'Show this message.') do
         puts options
         exit
@@ -282,6 +303,12 @@ module SifterCLICommands
       
       parser.parse!(arguments)
       parser.parse!(['--list'])      
+    elsif arguments.first == '--update'
+      arguments.shift
+      selector = arguments.shift
+      
+      parser.parse!(arguments)
+      parser.parse!(['--update', selector])
     else
       parser.parse!(arguments)
     end

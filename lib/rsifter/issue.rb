@@ -62,10 +62,10 @@ module Sifter
     
     def update_others(updates)
       editable_attributes = [:priority, :category, :assignee]
-      all_editable_attributes = ([:status, :subject, :body] << editable_attributes)
+      all_editable_attributes = [:status, :subject, :body, *editable_attributes]
       
       if !(updates.keys - all_editable_attributes).empty?
-        attributes_list = editable_attributes.collect {|attribute| attribute.to_s}.join(', ')
+        attributes_list = all_editable_attributes.collect {|attribute| attribute.to_s}.join(', ')
         
         return Sifter.detailed_return(project.client.detailed_return, 
                 :successful => false, 
