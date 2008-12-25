@@ -157,27 +157,24 @@ module SifterCLICommands
         exit
       end
       
-      options.on('--use [name]', String, 'Set the current project.') do |project_name|
-        if project_name == project
+      options.on('--use [name]', String, 'Set the current project.') do |project_name_or_id|   
+        attempt_login      
+        project_name = @client.project(project_name_or_id).name
+      
+        if @client.project(project_name).name == project
           puts "This project is already the current project. No changes made."
           exit
+        elsif !@client.project(project_name).nil?
+          create_project_file(project_name)
+          puts "Project switched to #{@client.project(project_name).name}."
         else
-          attempt_login
-          
-          unless @client.project(project_name).nil?
-            create_project_file(project_name)
-            puts "Project switched to #{@client.project(project_name).name}."
-          else
-            puts "Project #{project_name} does not exist for user #{@client.username}."
-          end
-          
-          exit
+          puts "Project #{project_name} does not exist for user #{@client.username}."
         end
       end
       
       options.on('--current', 'Shows the current project.') do
         if project
-          puts 'Current project: ' + project
+          puts 'Current project: ' + project.inspect
         else
           puts 'No current project.'
         end
