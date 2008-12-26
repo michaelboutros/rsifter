@@ -75,6 +75,71 @@ module Sifter
       load_comments(true)
     end
     
+    def create_comment(comment)
+      if comment.nil? || comment.empty?
+        return Sifter.detailed_return(project.client.detailed_return,
+          :successful => false,
+          :message => 'No comment values provided, comment not created.')
+      end
+      
+      if comment.keys.include?(:assigned_to)
+        comment[:assignee] = comment[:assigned_to]
+        comment.delete(:assigned_to)
+      end
+      
+      fields = [:body, :status, :priority, :category, :assignee]
+      
+      if !(comment.keys - fields).empty?
+        return Sifter.detailed_return(project.client.detailed_return,
+          :successful => false,
+          :message => "You provided too many fields. The only fields for adding a comment are: #{fields.collect {|field| field.to_s}.join(', ')} (or assigned_to).")
+      end
+      
+      issue_page = self.project.client.agent.get(self.url)
+      comment_form = issue_page.forms.first
+      
+      if !comment[:body].nil?
+        comment_form.field('comment[body]').value = comment[:body]
+        comment.delete(:body)
+      end
+      
+      if !comment[:status].nil?
+        value = get_actual_status(comment[:status])
+        
+        if value.nil?
+          return Sifter.detailed_return(project.client.detailed_return,
+                  :successful => false,
+                  :message => 'You provided an invalid value for \'status\'.')
+        end      
+        
+         comment_form.radiobuttons.find {|field| field.value.to_s.downcase == value.to_s.downcase}.check
+         comment.delete(:status)
+      end
+      
+      comment.keys.each do |field|
+        value = value_for("comment[#{field.to_s}_id]", comment_form, comment[field])
+        
+        if value.nil?
+          return Sifter.detailed_return(project.client.detailed_return,
+                  :successful => false,
+                  :message => "You provided an invalid value for '#{field.to_s}'.")
+        end
+
+        comment_form.field("comment[#{field.to_s}_id]").value = value
+      end
+      
+      begin
+        project.client.agent.submit(comment_form, comment_form.buttons.first)
+        return Sifter.detailed_return(project.client.detailed_return,
+          :succussful => true,
+          :message => 'Comment successfully created.')
+      rescue
+        return Sifter.detailed_return(project.client.detailed_return,
+          :successful => false,
+          :body => 'An unexpected error occured. Please try again.')
+      end
+    end
+    
     def update_subject_and_body(updates) # :nodoc:
       if (subject = updates.keys.include?(:subject)) || (body = updates.keys.include?(:body))
         update_page = project.client.agent.get(self.url + '/edit')
@@ -120,23 +185,8 @@ module Sifter
       
       # Change the status value explicitly, since "opened" can mean either opened or reopened.
       if updates.keys.include?(:status)
-        if updates[:status] == 'open' && (self.status == 'Closed' || self.status == 'Resolved')
-          updates[:status] = 'reopened'
-        end
+        value = get_actual_status(updates[:status])
         
-        if updates[:status] == 'resolved' && self.status == 'Closed'          
-          return Sifter.detailed_return(project.client.detailed_return,
-                  :successful => false,
-                  :message => 'You cannot change a closed issue to resolved.')
-        end
-        
-        if updates[:status] == 'open' && self.status == 'Reopened'
-          updates[:status] = 'reopened'
-        end
-        
-        status_codes = {'1' => 'Open', '2' => 'Reopened', '3' => 'Resolved', '4' => 'Closed'}
-        
-        value = status_codes.to_a.find {|code, status| status.downcase == updates[:status].downcase }[0]
         if value.nil?
           return Sifter.detailed_return(project.client.detailed_return,
                   :successful => false,
@@ -171,6 +221,21 @@ module Sifter
                 :successful => false,
                 :message => 'An unexpected error occured. Please try again.')
       end
+    end
+    
+    def get_actual_status(status)
+      if status == 'open' && self.status != 'Open'
+        status = 'reopened'
+      end
+      
+      if status == 'resolved' && self.status == 'Closed'          
+        return Sifter.detailed_return(project.client.detailed_return,
+                :successful => false,
+                :message => 'You cannot change a closed issue to resolved.')
+      end
+      
+      status_codes = {'1' => 'Open', '2' => 'Reopened', '3' => 'Resolved', '4' => 'Closed'}
+      return status_codes.to_a.find {|code, status_text| status_text.downcase == status.downcase }[0]
     end
     
     def value_for(field, form, text) # :nodoc:
