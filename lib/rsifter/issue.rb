@@ -20,10 +20,15 @@ module Sifter
       @url = project.url + "/#{self.number}"
     end
     
+    # Returns the body of the issue. This attribute is not loaded by default because it requires an extra
+    # call to the Sifter website.
     def body
       project.client.agent.get(self.url).at('div.description/p').inner_text
     end
     
+    # Passed a hash with symbols as the keys, this method will update the issue. The only attributes editable are:
+    # priority, category, status, assignee (or assigned_to), subject, and body. When creating a comment, this method
+    # is used if the comment updates any of the above mentioned attributes.
     def update(updates)
       updates.reject! {|key, value| value.nil? || value.strip == '' }
       
@@ -37,7 +42,7 @@ module Sifter
       update_others(updates)
     end
     
-    def update_status_and_body(updates)
+    def update_status_and_body(updates) # :nodoc:
       if (subject = updates.keys.include?(:subject)) || (body = updates.keys.include?(:body))
         update_page = project.client.agent.get(self.url + '/edit')
         update_form = update_page.forms.first
@@ -60,9 +65,14 @@ module Sifter
       end
     end
     
-    def update_others(updates)
+    def update_others(updates) # :nodoc:
       editable_attributes = [:priority, :category, :assignee]
       all_editable_attributes = [:status, :subject, :body, *editable_attributes]
+      
+      if updates.keys.include?(:assigned_to)
+        updates[:assignee] = updates[:assigned_to]
+        updates.delete(:assigned_to)
+      end
       
       if !(updates.keys - all_editable_attributes).empty?
         attributes_list = all_editable_attributes.collect {|attribute| attribute.to_s}.join(', ')
@@ -130,7 +140,7 @@ module Sifter
       end
     end
     
-    def value_for(field, form, text)
+    def value_for(field, form, text) # :nodoc:
       form.field(field).options.find {|field| field.text.downcase == text.downcase}
     end
   end

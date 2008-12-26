@@ -8,7 +8,8 @@ module Sifter
       @client, @id, @name, @url = client, id, name, url
     end
     
-    # Load this project's issues based on criteria.
+    # Load one of the project's issues based on criteria. The criteria can be a hash of attributes and their values,
+    # the id of the issue, the number of the issue, or the subject of the issue.
     def issue(criteria_or_other)
       reload_issues!
       
@@ -49,7 +50,8 @@ module Sifter
       end
     end
     
-    # Load this project's issues and put them into the issues instance variable.
+    # Load this project's issues and put them into the issues instance variable, unless they have already been
+    # loaded. Pass true as the first argument to reload the issues.
     def issues(reload = false)
       @issues = load_issues.collect {|issue| Issue.new(self, issue)} if reload || @issues.nil?
       return @issues
@@ -79,7 +81,7 @@ module Sifter
     end
     
     alias :original_inspect :inspect
-    def inspect
+    def inspect # :nodoc:
       "#<Sifter::Project @client=Sifter::Client @id=#{@id.inspect}, @name=#{@name.inspect}, @url=#{@url.inspect}>"
     end
     alias :to_s :inspect

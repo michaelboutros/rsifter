@@ -48,11 +48,15 @@ module Sifter
       @logged_in      
     end
     
+    # Returns an instance of Sifter::Project. Pass either the name of the project you are looking
+    # for, or it's ID.
     def project(name_or_id)
       attribute = (name_or_id.is_a?(Integer) || name_or_id.to_i != 0 ? :id : :name)
       self.projects.find {|project| project.send(attribute) == name_or_id.to_s}
     end
     
+    # Returns an array of Sifter::Project instances, and loads the projects for the first time if they
+    # have not yet been loaded.
     def projects
       return @projects || load_projects
     end
@@ -62,7 +66,7 @@ module Sifter
       @projects = parse_projects.collect {|project| Project.new(self, project[:id], project[:name])}
     end
     
-    # Reload the user's projects.
+    # Reload the user's projects from Sifter itself.
     def reload_projects
       @projects.clear
       load_projects
