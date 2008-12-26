@@ -26,7 +26,7 @@ module Sifter
           end      
         rescue NoMethodError
           return Sifter.detailed_return(client.detailed_return,
-                  :successful => nil,
+                  :successful => false,
                   :message => 'Criteria contained invalid attributes.')
         end
       elsif criteria_or_other.is_a?(Integer) || criteria_or_other.to_i != 0

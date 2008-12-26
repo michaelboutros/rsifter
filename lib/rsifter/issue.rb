@@ -18,6 +18,7 @@ module Sifter
       end
       
       @url = project.url + "/#{self.number}"
+      @comments = []
     end
     
     # Returns the body of the issue. This attribute is not loaded by default because it requires an extra
@@ -38,7 +39,7 @@ module Sifter
           :message => 'No updates or changes made.')
       end
       
-      update_status_and_body(updates)
+      update_subject_and_body(updates)
       update_others(updates)
     end
     
@@ -74,7 +75,7 @@ module Sifter
       load_comments(true)
     end
     
-    def update_status_and_body(updates) # :nodoc:
+    def update_subject_and_body(updates) # :nodoc:
       if (subject = updates.keys.include?(:subject)) || (body = updates.keys.include?(:body))
         update_page = project.client.agent.get(self.url + '/edit')
         update_form = update_page.forms.first
