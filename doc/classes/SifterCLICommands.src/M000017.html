@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="iso-8859-1"?>
+<!DOCTYPE html 
+     PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+     "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html>
+<head>
+  <title>projects (SifterCLICommands)</title>
+  <meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1" />
+  <link rel="stylesheet" href="../.././rdoc-style.css" type="text/css" media="screen" />
+</head>
+<body class="standalone-code">
+  <pre><span class="ruby-comment cmt"># File lib/rsifter/cli.rb, line 144</span>
+  <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">projects</span>(<span class="ruby-identifier">arguments</span>)
+    <span class="ruby-keyword kw">if</span> <span class="ruby-identifier">arguments</span>.<span class="ruby-identifier">empty?</span> <span class="ruby-keyword kw">then</span> <span class="ruby-identifier">projects</span>([<span class="ruby-value str">'--list'</span>]) <span class="ruby-keyword kw">end</span>
+      
+    <span class="ruby-constant">OptionParser</span>.<span class="ruby-identifier">new</span> <span class="ruby-keyword kw">do</span> <span class="ruby-operator">|</span><span class="ruby-identifier">options</span><span class="ruby-operator">|</span>
+      <span class="ruby-identifier">options</span>.<span class="ruby-identifier">banner</span> = <span class="ruby-value str">'usage: sifter project [options]'</span>
+      
+      <span class="ruby-identifier">options</span>.<span class="ruby-identifier">on</span>(<span class="ruby-value str">'--list'</span>, <span class="ruby-value str">'The current user\'s projects.'</span>) <span class="ruby-keyword kw">do</span>
+        <span class="ruby-identifier">attempt_login</span>
+        
+        <span class="ruby-ivar">@client</span>.<span class="ruby-identifier">projects</span>.<span class="ruby-identifier">each</span> <span class="ruby-keyword kw">do</span> <span class="ruby-operator">|</span><span class="ruby-identifier">project</span><span class="ruby-operator">|</span>
+          <span class="ruby-identifier">puts</span> <span class="ruby-node">&quot;- \&quot;#{project.name}\&quot;&quot;</span>
+        <span class="ruby-keyword kw">end</span>
+        
+        <span class="ruby-identifier">exit</span>
+      <span class="ruby-keyword kw">end</span>
+      
+      <span class="ruby-identifier">options</span>.<span class="ruby-identifier">on</span>(<span class="ruby-value str">'--use [name]'</span>, <span class="ruby-constant">String</span>, <span class="ruby-value str">'Set the current project.'</span>) <span class="ruby-keyword kw">do</span> <span class="ruby-operator">|</span><span class="ruby-identifier">project_name_or_id</span><span class="ruby-operator">|</span>   
+        <span class="ruby-identifier">attempt_login</span>      
+        <span class="ruby-identifier">project_name</span> = <span class="ruby-ivar">@client</span>.<span class="ruby-identifier">project</span>(<span class="ruby-identifier">project_name_or_id</span>).<span class="ruby-identifier">name</span>
+      
+        <span class="ruby-keyword kw">if</span> <span class="ruby-ivar">@client</span>.<span class="ruby-identifier">project</span>(<span class="ruby-identifier">project_name</span>).<span class="ruby-identifier">name</span> <span class="ruby-operator">==</span> <span class="ruby-identifier">project</span>
+          <span class="ruby-identifier">puts</span> <span class="ruby-value str">&quot;This project is already the current project. No changes made.&quot;</span>
+          <span class="ruby-identifier">exit</span>
+        <span class="ruby-keyword kw">elsif</span> <span class="ruby-operator">!</span><span class="ruby-ivar">@client</span>.<span class="ruby-identifier">project</span>(<span class="ruby-identifier">project_name</span>).<span class="ruby-identifier">nil?</span>
+          <span class="ruby-identifier">create_project_file</span>(<span class="ruby-identifier">project_name</span>)
+          <span class="ruby-identifier">puts</span> <span class="ruby-node">&quot;Project switched to #{@client.project(project_name).name}.&quot;</span>
+        <span class="ruby-keyword kw">else</span>
+          <span class="ruby-identifier">puts</span> <span class="ruby-node">&quot;Project #{project_name} does not exist for user #{@client.username}.&quot;</span>
+        <span class="ruby-keyword kw">end</span>
+      <span class="ruby-keyword kw">end</span>
+      
+      <span class="ruby-identifier">options</span>.<span class="ruby-identifier">on</span>(<span class="ruby-value str">'--current'</span>, <span class="ruby-value str">'Shows the current project.'</span>) <span class="ruby-keyword kw">do</span>
+        <span class="ruby-keyword kw">if</span> <span class="ruby-identifier">project</span>
+          <span class="ruby-identifier">puts</span> <span class="ruby-value str">'Current project: '</span> <span class="ruby-operator">+</span> <span class="ruby-identifier">project</span>.<span class="ruby-identifier">inspect</span>
+        <span class="ruby-keyword kw">else</span>
+          <span class="ruby-identifier">puts</span> <span class="ruby-value str">'No current project.'</span>
+        <span class="ruby-keyword kw">end</span>
+        <span class="ruby-identifier">exit</span>
+      <span class="ruby-keyword kw">end</span>
+      
+      <span class="ruby-identifier">options</span>.<span class="ruby-identifier">on</span>(<span class="ruby-value str">'--help'</span>, <span class="ruby-value str">'Show this message.'</span>) <span class="ruby-keyword kw">do</span>
+        <span class="ruby-identifier">puts</span> <span class="ruby-identifier">options</span>
+        <span class="ruby-identifier">exit</span>
+      <span class="ruby-keyword kw">end</span>
+    <span class="ruby-keyword kw">end</span>.<span class="ruby-identifier">parse!</span>(<span class="ruby-identifier">arguments</span>)
+  <span class="ruby-keyword kw">end</span></pre>
+</body>
+</html>

@@ -1,0 +1,140 @@
+<?xml version="1.0" encoding="iso-8859-1"?>
+<!DOCTYPE html 
+     PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+     "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html>
+<head>
+  <title>issues (SifterCLICommands)</title>
+  <meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1" />
+  <link rel="stylesheet" href="../.././rdoc-style.css" type="text/css" media="screen" />
+</head>
+<body class="standalone-code">
+  <pre><span class="ruby-comment cmt"># File lib/rsifter/cli.rb, line 191</span>
+  <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">issues</span>(<span class="ruby-identifier">arguments</span>)
+    <span class="ruby-keyword kw">if</span> <span class="ruby-identifier">arguments</span>.<span class="ruby-identifier">empty?</span>
+      <span class="ruby-identifier">issues</span>([<span class="ruby-value str">'--list'</span>])
+    <span class="ruby-keyword kw">elsif</span> <span class="ruby-operator">!</span>[<span class="ruby-value str">'--help'</span>, <span class="ruby-value str">'--format'</span>, <span class="ruby-value str">'--list'</span>, <span class="ruby-value str">'--update'</span>].<span class="ruby-identifier">include?</span>(<span class="ruby-identifier">arguments</span>.<span class="ruby-identifier">first</span>)
+      <span class="ruby-identifier">issues</span>([<span class="ruby-value str">'--list'</span>, <span class="ruby-operator">*</span><span class="ruby-identifier">arguments</span>])
+    <span class="ruby-keyword kw">end</span>
+    
+    <span class="ruby-identifier">issue_hash</span>, <span class="ruby-identifier">sort_option</span> = {}, <span class="ruby-keyword kw">nil</span>
+    <span class="ruby-identifier">parser</span> = <span class="ruby-constant">OptionParser</span>.<span class="ruby-identifier">new</span> <span class="ruby-keyword kw">do</span> <span class="ruby-operator">|</span><span class="ruby-identifier">options</span><span class="ruby-operator">|</span>
+      <span class="ruby-identifier">options</span>.<span class="ruby-identifier">banner</span> = <span class="ruby-value str">'usage: sifter issues [options]'</span>
+      
+      <span class="ruby-identifier">options</span>.<span class="ruby-identifier">on</span>(<span class="ruby-value str">'--project [project]'</span>, <span class="ruby-constant">String</span>, <span class="ruby-value str">'Show this project\'s issues instead of the current project\'s issues.'</span>) <span class="ruby-keyword kw">do</span> <span class="ruby-operator">|</span><span class="ruby-identifier">project</span><span class="ruby-operator">|</span>
+        <span class="ruby-identifier">entered_project</span> = <span class="ruby-identifier">project</span>
+      <span class="ruby-keyword kw">end</span>
+      
+      <span class="ruby-identifier">options</span>.<span class="ruby-identifier">on</span>(<span class="ruby-value str">'--format [format]'</span>, <span class="ruby-constant">String</span>, <span class="ruby-value str">'The format used to list issues. See docs for more information.'</span>) <span class="ruby-keyword kw">do</span> <span class="ruby-operator">|</span><span class="ruby-identifier">entered_format</span><span class="ruby-operator">|</span>
+        <span class="ruby-keyword kw">if</span> <span class="ruby-identifier">entered_format</span>.<span class="ruby-identifier">nil?</span>
+          <span class="ruby-identifier">puts</span> <span class="ruby-identifier">format</span>
+        <span class="ruby-keyword kw">elsif</span> <span class="ruby-identifier">entered_format</span> <span class="ruby-operator">==</span> <span class="ruby-identifier">format</span>
+          <span class="ruby-identifier">puts</span> <span class="ruby-value str">'Entered format is the save as current format. No changes made.'</span>
+        <span class="ruby-keyword kw">else</span>
+          <span class="ruby-identifier">create_format_file</span>(<span class="ruby-identifier">entered_format</span>.<span class="ruby-identifier">gsub</span>(<span class="ruby-regexp re">/\\-/</span>, <span class="ruby-value str">'-'</span>))
+          <span class="ruby-identifier">puts</span> <span class="ruby-node">&quot;Format #{entered_format.gsub(/\\-/, '-').inspect} saved.&quot;</span>
+        <span class="ruby-keyword kw">end</span>
+      <span class="ruby-keyword kw">end</span>
+      
+      <span class="ruby-identifier">options</span>.<span class="ruby-identifier">on</span>(<span class="ruby-value str">'--sort [sort]'</span>, <span class="ruby-value str">'Sort list of issues by [sort], ie. name DESC. Default direction is ASC'</span>) <span class="ruby-keyword kw">do</span> <span class="ruby-operator">|</span><span class="ruby-identifier">sort</span><span class="ruby-operator">|</span>
+        <span class="ruby-identifier">sort_option</span> = <span class="ruby-identifier">sort</span>
+      <span class="ruby-keyword kw">end</span>
+      
+      <span class="ruby-identifier">conditions_list</span> = {
+        <span class="ruby-value str">'id'</span> =<span class="ruby-operator">&gt;</span> <span class="ruby-value str">'i'</span>,
+        <span class="ruby-value str">'assigned_to'</span> =<span class="ruby-operator">&gt;</span> <span class="ruby-value str">'a'</span>,
+        <span class="ruby-value str">'subject'</span> =<span class="ruby-operator">&gt;</span> <span class="ruby-value str">'t'</span>,
+        <span class="ruby-value str">'opened_by'</span> =<span class="ruby-operator">&gt;</span> <span class="ruby-value str">'o'</span>,
+        <span class="ruby-value str">'status'</span> =<span class="ruby-operator">&gt;</span> <span class="ruby-value str">'s'</span>,
+        <span class="ruby-value str">'priority'</span> =<span class="ruby-operator">&gt;</span> <span class="ruby-value str">'p'</span>,
+        <span class="ruby-value str">'category'</span> =<span class="ruby-operator">&gt;</span> <span class="ruby-value str">'c'</span>,
+        <span class="ruby-value str">'comments'</span> =<span class="ruby-operator">&gt;</span> <span class="ruby-value str">'n'</span>,
+        <span class="ruby-value str">'created'</span> =<span class="ruby-operator">&gt;</span> <span class="ruby-value str">'d'</span>,
+        <span class="ruby-value str">'updated'</span> =<span class="ruby-operator">&gt;</span> <span class="ruby-value str">'u'</span>,
+        <span class="ruby-value str">'body'</span> =<span class="ruby-operator">&gt;</span> <span class="ruby-value str">'b'</span>
+      }
+      
+      <span class="ruby-identifier">conditions_list</span>.<span class="ruby-identifier">each</span> <span class="ruby-keyword kw">do</span> <span class="ruby-operator">|</span><span class="ruby-identifier">attribute</span>, <span class="ruby-identifier">short</span><span class="ruby-operator">|</span>
+        <span class="ruby-identifier">options</span>.<span class="ruby-identifier">on</span>(<span class="ruby-node">&quot;-#{short} [#{attribute}]&quot;</span>, <span class="ruby-node">&quot;--#{attribute} [#{attribute}]&quot;</span>, <span class="ruby-constant">String</span>, <span class="ruby-node">&quot;Filter issues based on #{attribute}.&quot;</span>) <span class="ruby-keyword kw">do</span> <span class="ruby-operator">|</span><span class="ruby-identifier">value</span><span class="ruby-operator">|</span>
+          <span class="ruby-identifier">issue_hash</span>[<span class="ruby-identifier">attribute</span>] = <span class="ruby-identifier">value</span>
+        <span class="ruby-keyword kw">end</span>
+      <span class="ruby-keyword kw">end</span>
+      
+      <span class="ruby-identifier">options</span>.<span class="ruby-identifier">on</span>(<span class="ruby-value str">'--list'</span>, <span class="ruby-value str">'Show a list of issues for the current project.'</span>) <span class="ruby-keyword kw">do</span>
+        <span class="ruby-identifier">attempt_login</span>
+        
+        <span class="ruby-identifier">project_name</span> = <span class="ruby-identifier">entered_project</span> <span class="ruby-keyword kw">rescue</span> <span class="ruby-identifier">project</span>
+        <span class="ruby-identifier">project_instance</span> = <span class="ruby-ivar">@client</span>.<span class="ruby-identifier">project</span>(<span class="ruby-identifier">project_name</span>)
+        
+        <span class="ruby-keyword kw">if</span> <span class="ruby-identifier">project_instance</span>.<span class="ruby-identifier">nil?</span>
+          <span class="ruby-identifier">puts</span> <span class="ruby-node">&quot;The project #{project_name.inspect} does not exist. Please update the current project using 'sifter project --current', or enter a different project.&quot;</span>
+          <span class="ruby-identifier">exit</span>
+        <span class="ruby-keyword kw">end</span>
+        
+        <span class="ruby-identifier">issues</span> = <span class="ruby-identifier">project_instance</span>.<span class="ruby-identifier">issues</span>
+        
+        <span class="ruby-keyword kw">unless</span> <span class="ruby-identifier">sort_option</span>.<span class="ruby-identifier">nil?</span> 
+          <span class="ruby-identifier">attribute</span>, <span class="ruby-identifier">direction</span> = <span class="ruby-operator">*</span><span class="ruby-identifier">sort_option</span>.<span class="ruby-identifier">split</span>(<span class="ruby-value str">' '</span>)
+          
+          <span class="ruby-keyword kw">if</span> <span class="ruby-identifier">issues</span>.<span class="ruby-identifier">first</span>.<span class="ruby-identifier">hash</span>.<span class="ruby-identifier">keys</span>.<span class="ruby-identifier">include?</span>(<span class="ruby-identifier">attribute</span>.<span class="ruby-identifier">to_sym</span>)
+            <span class="ruby-identifier">issues</span> = <span class="ruby-identifier">issues</span>.<span class="ruby-identifier">sort_by</span> {<span class="ruby-operator">|</span><span class="ruby-identifier">issue</span><span class="ruby-operator">|</span> <span class="ruby-identifier">issue</span>.<span class="ruby-identifier">send</span>(<span class="ruby-identifier">attribute</span>.<span class="ruby-identifier">to_sym</span>)}
+            
+            <span class="ruby-keyword kw">if</span> <span class="ruby-identifier">direction</span> <span class="ruby-operator">&amp;&amp;</span> <span class="ruby-identifier">direction</span> <span class="ruby-operator">==</span> <span class="ruby-value str">'desc'</span>
+              <span class="ruby-identifier">issues</span>.<span class="ruby-identifier">reverse!</span>
+            <span class="ruby-keyword kw">end</span>
+          <span class="ruby-keyword kw">end</span>
+        <span class="ruby-keyword kw">end</span>
+        
+        <span class="ruby-identifier">issue_hash</span>.<span class="ruby-identifier">each</span> <span class="ruby-keyword kw">do</span> <span class="ruby-operator">|</span><span class="ruby-identifier">key</span>, <span class="ruby-identifier">value</span><span class="ruby-operator">|</span>
+          <span class="ruby-identifier">issues</span>.<span class="ruby-identifier">reject!</span> { <span class="ruby-operator">|</span><span class="ruby-identifier">issue</span><span class="ruby-operator">|</span> <span class="ruby-identifier">issue</span>.<span class="ruby-identifier">send</span>(<span class="ruby-identifier">key</span>.<span class="ruby-identifier">to_sym</span>).<span class="ruby-identifier">downcase</span> <span class="ruby-operator">!=</span> <span class="ruby-identifier">value</span>.<span class="ruby-identifier">downcase</span> }
+        <span class="ruby-keyword kw">end</span>
+        
+        <span class="ruby-identifier">issues</span>.<span class="ruby-identifier">each</span> <span class="ruby-keyword kw">do</span> <span class="ruby-operator">|</span><span class="ruby-identifier">issue</span><span class="ruby-operator">|</span>
+          <span class="ruby-identifier">puts</span> <span class="ruby-identifier">formatted</span>(<span class="ruby-identifier">issue</span>)
+        <span class="ruby-keyword kw">end</span>
+      <span class="ruby-keyword kw">end</span>
+      
+      <span class="ruby-identifier">options</span>.<span class="ruby-identifier">on</span>(<span class="ruby-value str">'--update [selector]'</span>, <span class="ruby-value str">'Update the issue with the flags passed. See --help for available flags.'</span>) <span class="ruby-keyword kw">do</span> <span class="ruby-operator">|</span><span class="ruby-identifier">issue_selector</span><span class="ruby-operator">|</span>
+        <span class="ruby-keyword kw">if</span> <span class="ruby-identifier">issue_selector</span>.<span class="ruby-identifier">nil?</span>
+          <span class="ruby-identifier">puts</span> <span class="ruby-value str">'You must pass an issue id, number, or name to find the issue you want to update.'</span>
+          <span class="ruby-identifier">exit</span>
+        <span class="ruby-keyword kw">end</span>
+        
+        <span class="ruby-identifier">attempt_login</span>
+        
+        <span class="ruby-identifier">issue</span> = <span class="ruby-ivar">@client</span>.<span class="ruby-identifier">project</span>(<span class="ruby-identifier">project</span>).<span class="ruby-identifier">issue</span>(<span class="ruby-identifier">issue_selector</span>)
+        <span class="ruby-keyword kw">if</span> <span class="ruby-identifier">issue</span>.<span class="ruby-identifier">is_a?</span>(<span class="ruby-constant">Hash</span>) <span class="ruby-operator">&amp;&amp;</span> <span class="ruby-identifier">issue</span>[<span class="ruby-identifier">:successful</span>] <span class="ruby-operator">==</span> <span class="ruby-keyword kw">nil</span>
+          <span class="ruby-identifier">puts</span> <span class="ruby-value str">'Issue not found.'</span>
+          <span class="ruby-identifier">exit</span>
+        <span class="ruby-keyword kw">end</span>
+        
+        <span class="ruby-identifier">update_hash</span> = <span class="ruby-identifier">issue_hash</span>.<span class="ruby-identifier">each</span> {<span class="ruby-operator">|</span><span class="ruby-identifier">key</span>, <span class="ruby-identifier">value</span><span class="ruby-operator">|</span> <span class="ruby-identifier">issue_hash</span>.<span class="ruby-identifier">delete</span>(<span class="ruby-identifier">key</span>) <span class="ruby-keyword kw">and</span> <span class="ruby-identifier">issue_hash</span>[<span class="ruby-identifier">key</span>.<span class="ruby-identifier">to_sym</span>] = <span class="ruby-identifier">value</span>}
+        <span class="ruby-identifier">update</span> = <span class="ruby-identifier">issue</span>.<span class="ruby-identifier">update</span>(<span class="ruby-identifier">update_hash</span>)
+        
+        <span class="ruby-identifier">puts</span> <span class="ruby-identifier">update</span>[<span class="ruby-identifier">:message</span>]       
+      <span class="ruby-keyword kw">end</span>
+      
+      <span class="ruby-identifier">options</span>.<span class="ruby-identifier">on</span>(<span class="ruby-value str">'--help'</span>, <span class="ruby-value str">'Show this message.'</span>) <span class="ruby-keyword kw">do</span>
+        <span class="ruby-identifier">puts</span> <span class="ruby-identifier">options</span>
+        <span class="ruby-identifier">exit</span>
+      <span class="ruby-keyword kw">end</span>
+    <span class="ruby-keyword kw">end</span>
+    
+    <span class="ruby-keyword kw">if</span> <span class="ruby-identifier">arguments</span>.<span class="ruby-identifier">first</span> <span class="ruby-operator">==</span> <span class="ruby-value str">'--list'</span>
+      <span class="ruby-identifier">arguments</span>.<span class="ruby-identifier">shift</span>
+      
+      <span class="ruby-identifier">parser</span>.<span class="ruby-identifier">parse!</span>(<span class="ruby-identifier">arguments</span>)
+      <span class="ruby-identifier">parser</span>.<span class="ruby-identifier">parse!</span>([<span class="ruby-value str">'--list'</span>])      
+    <span class="ruby-keyword kw">elsif</span> <span class="ruby-identifier">arguments</span>.<span class="ruby-identifier">first</span> <span class="ruby-operator">==</span> <span class="ruby-value str">'--update'</span>
+      <span class="ruby-identifier">arguments</span>.<span class="ruby-identifier">shift</span>
+      <span class="ruby-identifier">selector</span> = <span class="ruby-identifier">arguments</span>.<span class="ruby-identifier">shift</span>
+      
+      <span class="ruby-identifier">parser</span>.<span class="ruby-identifier">parse!</span>(<span class="ruby-identifier">arguments</span>)
+      <span class="ruby-identifier">parser</span>.<span class="ruby-identifier">parse!</span>([<span class="ruby-value str">'--update'</span>, <span class="ruby-identifier">selector</span>])
+    <span class="ruby-keyword kw">else</span>
+      <span class="ruby-identifier">parser</span>.<span class="ruby-identifier">parse!</span>(<span class="ruby-identifier">arguments</span>)
+    <span class="ruby-keyword kw">end</span>
+  <span class="ruby-keyword kw">end</span></pre>
+</body>
+</html>

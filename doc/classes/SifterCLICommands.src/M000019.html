@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="iso-8859-1"?>
+<!DOCTYPE html 
+     PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+     "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html>
+<head>
+  <title>user (SifterCLICommands)</title>
+  <meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1" />
+  <link rel="stylesheet" href="../.././rdoc-style.css" type="text/css" media="screen" />
+</head>
+<body class="standalone-code">
+  <pre><span class="ruby-comment cmt"># File lib/rsifter/cli.rb, line 317</span>
+  <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">user</span>(<span class="ruby-identifier">arguments</span>)
+    <span class="ruby-keyword kw">if</span> <span class="ruby-identifier">arguments</span>.<span class="ruby-identifier">empty?</span> <span class="ruby-keyword kw">then</span> <span class="ruby-identifier">user</span>([<span class="ruby-value str">'--show'</span>]) <span class="ruby-keyword kw">end</span>
+    
+    <span class="ruby-constant">OptionParser</span>.<span class="ruby-identifier">new</span> <span class="ruby-keyword kw">do</span> <span class="ruby-operator">|</span><span class="ruby-identifier">options</span><span class="ruby-operator">|</span>
+      <span class="ruby-identifier">options</span>.<span class="ruby-identifier">banner</span> = <span class="ruby-value str">'usage: sifter user [options]'</span>
+      
+      <span class="ruby-identifier">options</span>.<span class="ruby-identifier">on</span>(<span class="ruby-value str">'--login'</span>, <span class="ruby-value str">'Replace the current user with a new one.'</span>) <span class="ruby-keyword kw">do</span>
+        <span class="ruby-identifier">subdomain</span>, <span class="ruby-identifier">username</span>, <span class="ruby-identifier">password</span> = <span class="ruby-identifier">ask_for_subdomain</span>, <span class="ruby-identifier">ask_for_username</span>, <span class="ruby-identifier">ask_for_password</span>
+        <span class="ruby-identifier">client</span> = <span class="ruby-constant">Sifter</span><span class="ruby-operator">::</span><span class="ruby-constant">Client</span>.<span class="ruby-identifier">new</span>(<span class="ruby-identifier">subdomain</span>, <span class="ruby-identifier">username</span>, <span class="ruby-identifier">password</span>)
+        
+        <span class="ruby-keyword kw">if</span> <span class="ruby-identifier">client</span>.<span class="ruby-identifier">logged_in?</span>
+          <span class="ruby-identifier">create_credentials_for</span>(<span class="ruby-identifier">subdomain</span>, <span class="ruby-identifier">username</span>, <span class="ruby-identifier">password</span>)
+          <span class="ruby-identifier">puts</span> <span class="ruby-value str">'Credentials saved.'</span>
+          <span class="ruby-identifier">exit</span>
+        <span class="ruby-keyword kw">else</span>
+          <span class="ruby-identifier">puts</span> <span class="ruby-value str">'Authentication failed, credentials not saved.'</span>
+        <span class="ruby-keyword kw">end</span>
+      <span class="ruby-keyword kw">end</span>
+      
+      <span class="ruby-identifier">options</span>.<span class="ruby-identifier">on</span>(<span class="ruby-value str">'--flush'</span>, <span class="ruby-value str">'Flush the old user and prompt for new credentials.'</span>) <span class="ruby-keyword kw">do</span>
+        <span class="ruby-identifier">puts</span> <span class="ruby-value str">'Flushing old credentials...'</span>
+        <span class="ruby-identifier">destroy_file</span>(<span class="ruby-identifier">credentials_file</span>)
+        
+        <span class="ruby-identifier">puts</span> <span class="ruby-value str">'Enter new information: '</span>        
+        
+        <span class="ruby-identifier">subdomain</span>, <span class="ruby-identifier">username</span>, <span class="ruby-identifier">password</span> = <span class="ruby-identifier">ask_for_subdomain</span>, <span class="ruby-identifier">ask_for_username</span>, <span class="ruby-identifier">ask_for_password</span>
+        <span class="ruby-identifier">client</span> = <span class="ruby-constant">Sifter</span><span class="ruby-operator">::</span><span class="ruby-constant">Client</span>.<span class="ruby-identifier">new</span>(<span class="ruby-identifier">subdomain</span>, <span class="ruby-identifier">username</span>, <span class="ruby-identifier">password</span>, <span class="ruby-keyword kw">false</span>)
+        
+        <span class="ruby-keyword kw">if</span> <span class="ruby-identifier">client</span>.<span class="ruby-identifier">logged_in?</span>
+          <span class="ruby-identifier">create_credentials_for</span>(<span class="ruby-identifier">ask_for_subdomain</span>, <span class="ruby-identifier">ask_for_username</span>, <span class="ruby-identifier">ask_for_password</span>)
+          <span class="ruby-identifier">puts</span> <span class="ruby-value str">'Credentials saved.'</span>
+        <span class="ruby-keyword kw">else</span>
+          <span class="ruby-identifier">puts</span> <span class="ruby-value str">'Authentication failed, credentials not saved.'</span>
+        <span class="ruby-keyword kw">end</span>
+        
+        <span class="ruby-identifier">exit</span>
+      <span class="ruby-keyword kw">end</span>
+      
+      <span class="ruby-identifier">options</span>.<span class="ruby-identifier">on</span>(<span class="ruby-value str">'--show'</span>, <span class="ruby-value str">'Show the current stored credentials.'</span>) <span class="ruby-keyword kw">do</span>
+        <span class="ruby-keyword kw">begin</span>
+          <span class="ruby-identifier">subdomain</span>, <span class="ruby-identifier">username</span>, <span class="ruby-identifier">password</span> = <span class="ruby-operator">*</span><span class="ruby-constant">File</span>.<span class="ruby-identifier">read</span>(<span class="ruby-identifier">credentials_file</span>).<span class="ruby-identifier">split</span>(<span class="ruby-value str">': '</span>)
+          <span class="ruby-identifier">puts</span> <span class="ruby-node">&quot;Current user: #{subdomain} - #{username}&quot;</span>
+        <span class="ruby-keyword kw">rescue</span> 
+          <span class="ruby-identifier">puts</span> <span class="ruby-value str">&quot;No credentials saved.&quot;</span>
+        <span class="ruby-keyword kw">end</span>
+      <span class="ruby-keyword kw">end</span>
+      
+      <span class="ruby-identifier">options</span>.<span class="ruby-identifier">on</span>(<span class="ruby-value str">'--help'</span>, <span class="ruby-value str">'Show this message.'</span>) <span class="ruby-keyword kw">do</span>
+        <span class="ruby-identifier">puts</span> <span class="ruby-identifier">options</span>
+        <span class="ruby-identifier">exit</span>
+      <span class="ruby-keyword kw">end</span>
+    <span class="ruby-keyword kw">end</span>.<span class="ruby-identifier">parse</span>(<span class="ruby-identifier">arguments</span>)
+  <span class="ruby-keyword kw">end</span></pre>
+</body>
+</html>
