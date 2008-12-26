@@ -226,7 +226,6 @@ module SifterCLICommands
         'status' => 's',
         'priority' => 'p',
         'category' => 'c',
-        'comments' => 'n',
         'created' => 'd',
         'updated' => 'u',
         'body' => 'b'

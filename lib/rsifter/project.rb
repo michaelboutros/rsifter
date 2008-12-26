@@ -73,7 +73,6 @@ module Sifter
           :status => issue.at('li.status').inner_text.strip,
           :priority => issue.at('li.priority').inner_text.strip,
           :category => issue.at('h3').search('span/a').inner_text.strip,
-          :comments => (issue.at('span.meta/a').inner_text.match(/(\d+)/).to_a.last.strip rescue '0').to_i,
           :date_created => issue.at('span.meta').inner_text.match(/^(.+?) old/).to_a.last.strip,
           :date_updated => (issue.at('span.meta').inner_text.match(/Last by (.+?) (\d+ .+?) ago$/).to_a.last.strip rescue 'Never')
         }

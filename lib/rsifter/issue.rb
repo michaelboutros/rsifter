@@ -42,6 +42,38 @@ module Sifter
       update_others(updates)
     end
     
+    # Load this issue's comments unless they have already been loaded. If true is passed, they are loaded regardless.
+    def comments(reload = false)
+      @comments = load_comments.collect {|comment| Comment.new(self, comment[:id], comment[:author], comment[:body], comment[:changes], comment[:date_created])} if reload || @comments.nil?
+      return @comments
+    end
+    
+    def load_comments # :nodoc:
+      return project.client.agent.get(url).search('div.comment').map do |issue|
+        body ||= begin
+          if (paras = issue.at('div.container').search('p')).length == 2
+            paras.to_a.last.inner_text.strip
+          else
+            ''
+          end
+        end
+
+        {
+          :id => issue.attributes['id'].match(/comment_(\d+)/).to_a.last,
+          :author => issue.at('span.commenter').inner_text,
+          :body => body,
+          :changes => (issue.at('div.container/p.changes').inner_text.strip rescue ''),
+          :date_created => DateTime.parse(issue.at('span.created').inner_text)
+        }
+      end
+    end
+    
+    # Reload this issue's comments.
+    def reload_comments!
+      @comments.clear
+      load_comments(true)
+    end
+    
     def update_status_and_body(updates) # :nodoc:
       if (subject = updates.keys.include?(:subject)) || (body = updates.keys.include?(:body))
         update_page = project.client.agent.get(self.url + '/edit')
